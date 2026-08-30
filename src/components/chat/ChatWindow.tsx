@@ -34,21 +34,29 @@ export default function ChatWindow() {
     });
 
     let streamed = '';
-    await aiService.ask({
-      prompt,
-      conversationId,
-      onStep: (step: ResearchStep) => {
-        updateMessage(conversationId, assistantId, {
-          researchSteps: mergeSteps(step),
-        });
-      },
-      onToken: (partial) => {
-        streamed += partial;
-        updateMessage(conversationId, assistantId, { content: streamed, isStreaming: true });
-      },
-    });
-
-    updateMessage(conversationId, assistantId, { isStreaming: false });
+    try {
+      await aiService.ask({
+        prompt,
+        conversationId,
+        onStep: (step: ResearchStep) => {
+          updateMessage(conversationId, assistantId, {
+            researchSteps: mergeSteps(step),
+          });
+        },
+        onToken: (partial) => {
+          streamed += partial;
+          updateMessage(conversationId, assistantId, { content: streamed, isStreaming: true });
+        },
+      });
+      updateMessage(conversationId, assistantId, { isStreaming: false });
+    } catch {
+      updateMessage(conversationId, assistantId, {
+        isStreaming: false,
+        error: true,
+        content: '',
+        researchSteps: [],
+      });
+    }
 
     function mergeSteps(step: ResearchStep): ResearchStep[] {
       const current = conversations.find((c) => c.id === conversationId)?.messages.find((m) => m.id === assistantId)
@@ -72,9 +80,9 @@ export default function ChatWindow() {
 
   if (!conversation || messages.length === 0) {
     return (
-      <div className="flex-1 flex flex-col">
+      <div className="flex-1 flex flex-col min-h-0">
         <WelcomeScreen />
-        <div className="px-4 sm:px-6 pb-6 sm:pb-8 max-w-3xl w-full mx-auto">
+        <div className="px-4 sm:px-6 pb-6 sm:pb-8 max-w-3xl w-full mx-auto shrink-0">
           <ChatInput onSubmit={handleSend} autoFocus />
         </div>
       </div>
@@ -91,7 +99,7 @@ export default function ChatWindow() {
           <div ref={bottomRef} />
         </div>
       </div>
-      <div className="px-4 sm:px-6 pb-5 pt-2 border-t border-line">
+      <div className="px-4 sm:px-6 pb-5 pt-2 border-t border-line shrink-0">
         <div className="max-w-3xl mx-auto">
           <ChatInput onSubmit={handleSend} />
         </div>
