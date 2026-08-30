@@ -9,12 +9,18 @@
 // UI can be built and demoed before the backend exists.
 // ────────────────────────────────────────────────────────────────────────
 
-import { USE_MOCK_SERVICES, ENDPOINTS, mockDelay } from '@/lib/config';
-import type { Message, ResearchStep, Source } from '@/types';
+import { USE_MOCK_AI, ENDPOINTS, mockDelay } from '@/lib/config';
+import type { Message, ResearchStep, Source, Role } from '@/types';
 
 export interface AskParams {
   prompt: string;
   conversationId?: string;
+  /**
+   * Prior turns in this conversation, oldest first, excluding the new
+   * prompt above. Sent to the backend for context. Optional and additive —
+   * omitting it just means the request has no prior context.
+   */
+  history?: { role: Role; content: string }[];
   onStep?: (step: ResearchStep) => void;
   onToken?: (partial: string) => void;
 }
@@ -87,17 +93,79 @@ async function mockAsk({ prompt, onStep, onToken }: AskParams): Promise<AskResul
   };
 }
 
+/**
+ * Real implementation: streams a response from the CyberHack backend
+ * (server/src/routes/chat.ts), which proxies to the AI provider. The
+ * backend never sends its provider API key here — this only ever talks to
+ * our own server, over the endpoint configured in VITE_AI_GATEWAY_URL.
+ *
+ * Uses fetch + a manual SSE parser (not EventSource) because this is a
+ * POST request with a JSON body, which EventSource can't send.
+ */
 async function realAsk(params: AskParams): Promise<AskResult> {
-  const res = await fetch(`${ENDPOINTS.ai}/ask`, {
+  const res = await fetch(`${ENDPOINTS.ai}/chat`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ prompt: params.prompt, conversationId: params.conversationId }),
+    body: JSON.stringify({
+      messages: [...(params.history ?? []), { role: 'user', content: params.prompt }],
+    }),
   });
-  if (!res.ok) throw new Error(`AI gateway error: ${res.status}`);
-  return res.json();
+
+  if (!res.ok || !res.body) {
+    let message = `AI backend error (${res.status})`;
+    try {
+      const data = await res.json();
+      if (data?.error?.message) message = data.error.message;
+    } catch {
+      // response wasn't JSON — keep the generic message above
+    }
+    throw new Error(message);
+  }
+
+  const reader = res.body.getReader();
+  const decoder = new TextDecoder();
+  let buffer = '';
+  let fullText = '';
+
+  while (true) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    buffer += decoder.decode(value, { stream: true });
+
+    const events = buffer.split('\n\n');
+    buffer = events.pop() ?? '';
+
+    for (const event of events) {
+      const line = event.trim();
+      if (!line.startsWith('data:')) continue;
+      const payload = line.slice(5).trim();
+
+      let json: { token?: string; done?: boolean; error?: { code: string; message: string } };
+      try {
+        json = JSON.parse(payload);
+      } catch {
+        continue; // ignore malformed/partial chunks
+      }
+
+      if (json.error) throw new Error(json.error.message);
+      if (json.token) {
+        fullText += json.token;
+        params.onToken?.(json.token);
+      }
+    }
+  }
+
+  return {
+    message: {
+      id: crypto.randomUUID(),
+      role: 'assistant',
+      content: fullText,
+      createdAt: new Date().toISOString(),
+    },
+  };
 }
 
 export const aiService = {
-  ask: USE_MOCK_SERVICES ? mockAsk : realAsk,
-  isMock: USE_MOCK_SERVICES,
+  ask: USE_MOCK_AI ? mockAsk : realAsk,
+  isMock: USE_MOCK_AI,
 };
