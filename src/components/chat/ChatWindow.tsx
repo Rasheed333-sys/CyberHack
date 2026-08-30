@@ -33,11 +33,22 @@ export default function ChatWindow() {
       researchSteps: [],
     });
 
+    // Read live store state rather than the closed-over `conversations`
+    // value, which is stale as of this render (it won't reflect the
+    // appendMessage call above, or the user message appended just before
+    // this function was invoked).
+    const priorMessages = useAppStore.getState().conversations.find((c) => c.id === conversationId)?.messages ?? [];
+    const history = priorMessages
+      .filter((m) => (m.role === 'user' || m.role === 'assistant') && m.id !== assistantId && !m.error && m.content)
+      .slice(-12)
+      .map((m) => ({ role: m.role, content: m.content }));
+
     let streamed = '';
     try {
       await aiService.ask({
         prompt,
         conversationId,
+        history,
         onStep: (step: ResearchStep) => {
           updateMessage(conversationId, assistantId, {
             researchSteps: mergeSteps(step),
@@ -59,8 +70,9 @@ export default function ChatWindow() {
     }
 
     function mergeSteps(step: ResearchStep): ResearchStep[] {
-      const current = conversations.find((c) => c.id === conversationId)?.messages.find((m) => m.id === assistantId)
-        ?.researchSteps ?? [];
+      const current =
+        useAppStore.getState().conversations.find((c) => c.id === conversationId)?.messages.find((m) => m.id === assistantId)
+          ?.researchSteps ?? [];
       const exists = current.some((s) => s.id === step.id);
       return exists ? current.map((s) => (s.id === step.id ? step : s)) : [...current, step];
     }
