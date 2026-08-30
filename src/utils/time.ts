@@ -14,3 +14,32 @@ export function relativeTime(iso: string): string {
   if (diffWeek < 4) return `${diffWeek}w ago`;
   return new Date(iso).toLocaleDateString();
 }
+
+function startOfDay(d: Date): number {
+  return new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime();
+}
+
+/**
+ * Buckets a list of items with an `updatedAt` ISO string into Today /
+ * Yesterday / Earlier this week / Older groups, preserving input order
+ * within each bucket. Used by the sidebar's conversation history.
+ */
+export function groupByDate<T extends { updatedAt: string }>(items: T[]): { label: string; items: T[] }[] {
+  const today = startOfDay(new Date());
+  const yesterday = today - 86_400_000;
+  const weekAgo = today - 6 * 86_400_000;
+
+  const buckets: Record<string, T[]> = { Today: [], Yesterday: [], 'This week': [], Earlier: [] };
+
+  for (const item of items) {
+    const day = startOfDay(new Date(item.updatedAt));
+    if (day === today) buckets.Today.push(item);
+    else if (day === yesterday) buckets.Yesterday.push(item);
+    else if (day >= weekAgo) buckets['This week'].push(item);
+    else buckets.Earlier.push(item);
+  }
+
+  return Object.entries(buckets)
+    .filter(([, items]) => items.length > 0)
+    .map(([label, items]) => ({ label, items }));
+}
