@@ -41,6 +41,8 @@ export interface Message {
   citations?: Citation[];
   researchSteps?: ResearchStep[];
   isStreaming?: boolean;
+  /** Set when the assistant reply failed. UI renders ErrorState instead of content. */
+  error?: boolean;
 }
 
 export interface Conversation {
@@ -90,6 +92,21 @@ export interface SearchSuggestion {
   id: string;
   label: string;
   kind: 'history' | 'suggestion' | 'action';
+}
+
+/**
+ * A single mock web search result. isMockData is always true until a real
+ * search backend is connected — see src/services/search/index.ts.
+ */
+export interface SearchResult {
+  id: string;
+  title: string;
+  url: string;
+  domain: string;
+  description: string;
+  publishedAt?: string;
+  secure: boolean;
+  isMockData: boolean;
 }
 
 export type SearchPhase = 'idle' | 'searching' | 'analyzing' | 'cross-checking' | 'done' | 'error';
