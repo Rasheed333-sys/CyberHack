@@ -1,9 +1,10 @@
 import { useEffect, useRef, useState } from 'react';
-import { ArrowUp, Paperclip, Mic, Globe, ShieldCheck, Loader2 } from 'lucide-react';
+import { ArrowUp, Paperclip, Mic, Globe, ShieldCheck, Compass, Loader2 } from 'lucide-react';
 import { searchService } from '@/services/search';
 import SearchSuggestions from '@/components/search/SearchSuggestions';
 import type { SearchSuggestion } from '@/types';
 import { cn } from '@/utils/cn';
+import IconButton from '@/components/ui/IconButton';
 
 interface ChatInputProps {
   onSubmit: (text: string) => void;
@@ -17,7 +18,8 @@ export default function ChatInput({ onSubmit, loading, disabled, autoFocus }: Ch
   const [suggestions, setSuggestions] = useState<SearchSuggestion[]>([]);
   const [showSuggestions, setShowSuggestions] = useState(false);
   const [webSearchOn, setWebSearchOn] = useState(true);
-  const [secureOn, setSecureOn] = useState(true);
+  const [deepResearchOn, setDeepResearchOn] = useState(false);
+  const [privacyModeOn, setPrivacyModeOn] = useState(true);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const wrapperRef = useRef<HTMLDivElement>(null);
 
@@ -97,25 +99,11 @@ export default function ChatInput({ onSubmit, loading, disabled, autoFocus }: Ch
           onKeyDown={handleKeyDown}
         />
 
-        <div className="flex items-center justify-between px-2.5 pb-2.5 pt-1.5">
-          <div className="flex items-center gap-1">
-            <button
-              type="button"
-              disabled
-              title="Attach a file (coming soon)"
-              className="h-7 w-7 flex items-center justify-center rounded-sm text-white/25 cursor-not-allowed"
-            >
-              <Paperclip size={14} />
-            </button>
-            <button
-              type="button"
-              disabled
-              title="Voice input (coming soon)"
-              className="h-7 w-7 flex items-center justify-center rounded-sm text-white/25 cursor-not-allowed"
-            >
-              <Mic size={14} />
-            </button>
-            <div className="w-px h-4 bg-line mx-1" />
+        <div className="flex items-center justify-between px-2.5 pb-2.5 pt-1.5 flex-wrap gap-y-2">
+          <div className="flex items-center gap-1 flex-wrap">
+            <IconButton icon={<Paperclip size={14} />} label="Attach a file (coming soon)" disabled size="sm" />
+            <IconButton icon={<Mic size={14} />} label="Voice input (coming soon)" disabled size="sm" />
+            <div className="w-px h-4 bg-line mx-1 hidden sm:block" />
             <button
               type="button"
               onClick={() => setWebSearchOn((v) => !v)}
@@ -126,19 +114,31 @@ export default function ChatInput({ onSubmit, loading, disabled, autoFocus }: Ch
               )}
             >
               <Globe size={12} />
-              <span className="hidden sm:inline">Web</span>
+              <span className="hidden sm:inline">Search Web</span>
             </button>
             <button
               type="button"
-              onClick={() => setSecureOn((v) => !v)}
-              title="Toggle secure browsing routing"
+              onClick={() => setDeepResearchOn((v) => !v)}
+              title="Toggle deep research mode"
               className={cn(
                 'h-7 flex items-center gap-1.5 px-2 rounded-sm text-[11px] font-mono uppercase tracking-wide transition-colors',
-                secureOn ? 'text-neon bg-neon/10 border border-neon/30' : 'text-white/35 border border-transparent hover:text-white/60',
+                deepResearchOn ? 'text-cyan bg-cyan/10 border border-cyan/30' : 'text-white/35 border border-transparent hover:text-white/60',
+              )}
+            >
+              <Compass size={12} />
+              <span className="hidden sm:inline">Deep Research</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => setPrivacyModeOn((v) => !v)}
+              title="Toggle privacy-routed browsing"
+              className={cn(
+                'h-7 flex items-center gap-1.5 px-2 rounded-sm text-[11px] font-mono uppercase tracking-wide transition-colors',
+                privacyModeOn ? 'text-neon bg-neon/10 border border-neon/30' : 'text-white/35 border border-transparent hover:text-white/60',
               )}
             >
               <ShieldCheck size={12} />
-              <span className="hidden sm:inline">Secure</span>
+              <span className="hidden sm:inline">Privacy Mode</span>
             </button>
           </div>
 
