@@ -8,6 +8,7 @@ interface ImportMetaEnv {
   readonly VITE_SECURITY_API_URL: string;
   readonly VITE_AUTH_API_URL: string;
   readonly VITE_USE_MOCK_SERVICES: string;
+  readonly VITE_USE_MOCK_AI: string;
 }
 
 interface ImportMeta {
