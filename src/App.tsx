@@ -1,8 +1,10 @@
 import { Routes, Route, useLocation } from 'react-router-dom';
+import { AnimatePresence } from 'framer-motion';
 import { useEffect } from 'react';
 import Sidebar from '@/components/layout/Sidebar';
 import MobileSidebar from '@/components/layout/MobileSidebar';
 import Header from '@/components/layout/Header';
+import PageTransition from '@/components/ui/PageTransition';
 import Home from '@/pages/Home';
 import Search from '@/pages/Search';
 import Research from '@/pages/Research';
@@ -49,14 +51,16 @@ export default function App() {
       <MobileSidebar />
       <div className="flex-1 flex flex-col min-w-0">
         <Header title={title} />
-        <Routes>
-          <Route path="/" element={<Home />} />
-          <Route path="/search" element={<Search />} />
-          <Route path="/research" element={<Research />} />
-          <Route path="/secure-browse" element={<SecureBrowse />} />
-          <Route path="/privacy" element={<Privacy />} />
-          <Route path="/settings" element={<Settings />} />
-        </Routes>
+        <AnimatePresence mode="wait">
+          <Routes location={location} key={location.pathname}>
+            <Route path="/" element={<PageTransition><Home /></PageTransition>} />
+            <Route path="/search" element={<PageTransition><Search /></PageTransition>} />
+            <Route path="/research" element={<PageTransition><Research /></PageTransition>} />
+            <Route path="/secure-browse" element={<PageTransition><SecureBrowse /></PageTransition>} />
+            <Route path="/privacy" element={<PageTransition><Privacy /></PageTransition>} />
+            <Route path="/settings" element={<PageTransition><Settings /></PageTransition>} />
+          </Routes>
+        </AnimatePresence>
       </div>
     </div>
   );
