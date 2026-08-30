@@ -7,6 +7,11 @@
 export const USE_MOCK_SERVICES =
   (import.meta.env.VITE_USE_MOCK_SERVICES ?? 'true') !== 'false';
 
+// The AI chat backend is switched independently from the other (still
+// mock) services below, so the real backend can be turned on for chat
+// without needing search/privacy/security backends to exist yet.
+export const USE_MOCK_AI = (import.meta.env.VITE_USE_MOCK_AI ?? 'true') !== 'false';
+
 export const ENDPOINTS = {
   ai: import.meta.env.VITE_AI_GATEWAY_URL ?? '',
   search: import.meta.env.VITE_SEARCH_API_URL ?? '',
