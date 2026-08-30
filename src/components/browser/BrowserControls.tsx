@@ -24,7 +24,7 @@ export default function BrowserControls({
         value={value}
         onChange={(e) => setValue(e.target.value)}
         onKeyDown={(e) => e.key === 'Enter' && submit()}
-        placeholder="Enter a URL or domain to analyze — e.g. example.com"
+        placeholder="Enter website URL — e.g. example.com"
         className="flex-1 bg-transparent text-sm text-white placeholder:text-white/30 focus:outline-none"
       />
       <button
