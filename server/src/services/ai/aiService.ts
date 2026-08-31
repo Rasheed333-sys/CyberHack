@@ -1,8 +1,9 @@
 import { config } from '../../config';
 import { createGroqProvider } from './providers/groqProvider';
 import { createMockProvider } from './providers/mockProvider';
-import { SYSTEM_PROMPT } from './systemPrompt';
+import { buildSystemPrompt } from './systemPrompt';
 import type { AIProvider, ChatMessage } from './types';
+import type { NormalizedSource } from '../search/types';
 
 let cachedProvider: AIProvider | null = null;
 
@@ -21,8 +22,9 @@ export async function runChat(
   messages: ChatMessage[],
   onToken: (token: string) => void,
   signal?: AbortSignal,
+  sources: NormalizedSource[] = [],
 ): Promise<string> {
-  const withSystemPrompt: ChatMessage[] = [{ role: 'system', content: SYSTEM_PROMPT }, ...messages];
+  const withSystemPrompt: ChatMessage[] = [{ role: 'system', content: buildSystemPrompt(sources) }, ...messages];
   return getProvider().stream(withSystemPrompt, onToken, signal);
 }
 
