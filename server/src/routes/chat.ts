@@ -1,6 +1,9 @@
 import { Router } from 'express';
 import { validateChatBody } from '../validation/chat';
 import { runChat } from '../services/ai/aiService';
+import { shouldAutoSearch } from '../services/search/searchDecision';
+import { gatherSources } from '../services/search/sourceGatherer';
+import { toPublicSource } from '../services/search/types';
 
 export const chatRouter = Router();
 
@@ -12,6 +15,7 @@ chatRouter.post('/chat', async (req, res) => {
     res.status(400).json({ error: validation.error });
     return;
   }
+  const { messages, mode } = validation;
 
   // Server-Sent Events response. Chosen over WebSockets because this is a
   // one-shot request → progressive-response stream, which SSE handles with
@@ -33,14 +37,40 @@ chatRouter.post('/chat', async (req, res) => {
   };
 
   try {
-    await runChat(validation.messages, (token) => send({ token }), controller.signal);
-    send({ done: true });
+    const lastUserMessage = messages[messages.length - 1].content;
+
+    // Decide whether to search: explicit mode wins; AUTO falls back to the
+    // simple heuristic. "chat" never searches.
+    const shouldSearch = mode === 'web' ? true : mode === 'chat' ? false : shouldAutoSearch(lastUserMessage);
+
+    let sources: Awaited<ReturnType<typeof gatherSources>>['sources'] = [];
+    let searched = false;
+
+    if (shouldSearch) {
+      send({ step: { id: 'search', label: 'Searching the web', status: 'active' } });
+      const gathered = await gatherSources(lastUserMessage);
+      sources = gathered.sources;
+      searched = gathered.searched;
+
+      if (searched) {
+        send({ step: { id: 'search', label: 'Searching the web', status: 'done' } });
+        send({ step: { id: 'sources', label: 'Reading sources', status: 'done' } });
+        send({ sources: sources.map(toPublicSource) });
+      } else {
+        // Explicit, honest status instead of silently pretending nothing
+        // was requested — matches the required graceful-fallback behavior.
+        send({ step: { id: 'search', label: 'Web search unavailable — answering from general knowledge', status: 'error' } });
+      }
+    }
+
+    send({ step: { id: 'synthesize', label: 'Synthesizing', status: 'active' } });
+    await runChat(messages, (token) => send({ token }), controller.signal, sources);
+    send({ step: { id: 'synthesize', label: 'Synthesizing', status: 'done' } });
+    send({ done: true, searched });
   } catch (err) {
-    // The real error is logged server-side only; the client gets a clean,
-    // generic message — never a stack trace or provider error detail.
     const detail = err instanceof Error ? err.message : 'Unknown error';
     // eslint-disable-next-line no-console
-    console.error('[chat] provider error:', detail);
+    console.error('[chat] error:', detail);
     send({
       error: {
         code: 'AI_REQUEST_FAILED',
