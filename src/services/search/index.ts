@@ -1,5 +1,6 @@
-// Search service abstraction — real impl calls VITE_SEARCH_API_URL.
-import { USE_MOCK_SERVICES, ENDPOINTS, mockDelay } from '@/lib/config';
+// Search service abstraction — real impl calls VITE_SEARCH_API_URL (the
+// same CyberHack backend as the AI chat, see server/src/routes/search.ts).
+import { USE_MOCK_SERVICES, USE_MOCK_SEARCH, ENDPOINTS, mockDelay } from '@/lib/config';
 import type { SearchSuggestion, SearchResult } from '@/types';
 
 const MOCK_SUGGESTIONS: SearchSuggestion[] = [
@@ -47,14 +48,47 @@ async function mockSearch(query: string): Promise<SearchResult[]> {
   }));
 }
 
+interface BackendSearchResult {
+  title: string;
+  url: string;
+  domain: string;
+  snippet: string;
+  publishedAt?: string;
+}
+
 async function realSearch(query: string): Promise<SearchResult[]> {
-  const res = await fetch(`${ENDPOINTS.search}?q=${encodeURIComponent(query)}`);
-  if (!res.ok) throw new Error(`Search service error: ${res.status}`);
-  return res.json();
+  const res = await fetch(`${ENDPOINTS.search}`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ query, maxResults: 6 }),
+  });
+
+  if (!res.ok) {
+    let message = `Search service error (${res.status})`;
+    try {
+      const data = await res.json();
+      if (data?.error?.message) message = data.error.message;
+    } catch {
+      // response wasn't JSON — keep the generic message above
+    }
+    throw new Error(message);
+  }
+
+  const data: { results: BackendSearchResult[] } = await res.json();
+  return data.results.map((r, i) => ({
+    id: `res-${i}`,
+    title: r.title,
+    url: r.url,
+    domain: r.domain,
+    description: r.snippet,
+    publishedAt: r.publishedAt,
+    secure: r.url.startsWith('https://'),
+    isMockData: false,
+  }));
 }
 
 export const searchService = {
   suggest: USE_MOCK_SERVICES ? mockSuggest : realSuggest,
-  search: USE_MOCK_SERVICES ? mockSearch : realSearch,
-  isMock: USE_MOCK_SERVICES,
+  search: USE_MOCK_SEARCH ? mockSearch : realSearch,
+  isMock: USE_MOCK_SEARCH,
 };
