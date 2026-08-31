@@ -1,10 +1,11 @@
 import { useEffect, useRef } from 'react';
 import { useAppStore } from '@/store/useAppStore';
 import { aiService } from '@/services/ai';
+import type { SearchMode } from '@/services/ai';
 import ChatMessage from './ChatMessage';
 import ChatInput from './ChatInput';
 import WelcomeScreen from './WelcomeScreen';
-import type { Message, ResearchStep } from '@/types';
+import type { Message, ResearchStep, Source } from '@/types';
 
 export default function ChatWindow() {
   const currentId = useAppStore((s) => s.currentConversationId);
@@ -22,7 +23,7 @@ export default function ChatWindow() {
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages.length, lastMessageContent]);
 
-  const runAssistantReply = async (conversationId: string, prompt: string) => {
+  const runAssistantReply = async (conversationId: string, prompt: string, mode: SearchMode = 'auto') => {
     const assistantId = crypto.randomUUID();
     appendMessage(conversationId, {
       id: assistantId,
@@ -49,10 +50,14 @@ export default function ChatWindow() {
         prompt,
         conversationId,
         history,
+        mode,
         onStep: (step: ResearchStep) => {
           updateMessage(conversationId, assistantId, {
             researchSteps: mergeSteps(step),
           });
+        },
+        onSources: (sources: Source[]) => {
+          updateMessage(conversationId, assistantId, { sources });
         },
         onToken: (partial) => {
           streamed += partial;
@@ -78,7 +83,7 @@ export default function ChatWindow() {
     }
   };
 
-  const handleSend = async (text: string) => {
+  const handleSend = async (text: string, mode: SearchMode) => {
     const id = currentId ?? startNewConversation();
     const userMessage: Message = {
       id: crypto.randomUUID(),
@@ -87,7 +92,7 @@ export default function ChatWindow() {
       createdAt: new Date().toISOString(),
     };
     appendMessage(id, userMessage);
-    await runAssistantReply(id, text);
+    await runAssistantReply(id, text, mode);
   };
 
   if (!conversation || messages.length === 0) {
