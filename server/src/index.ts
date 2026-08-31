@@ -2,10 +2,11 @@ import express from 'express';
 import cors from 'cors';
 import { config } from './config';
 import { securityHeaders } from './middleware/security';
-import { chatRateLimiter } from './middleware/rateLimiter';
+import { chatRateLimiter, searchRateLimiter } from './middleware/rateLimiter';
 import { errorHandler, notFoundHandler } from './middleware/errorHandler';
 import { healthRouter } from './routes/health';
 import { chatRouter } from './routes/chat';
+import { searchRouter } from './routes/search';
 
 const app = express();
 
@@ -39,6 +40,7 @@ app.use(express.json({ limit: config.limits.maxBodyBytes }));
 
 app.use('/api', healthRouter);
 app.use('/api', chatRateLimiter, chatRouter);
+app.use('/api', searchRateLimiter, searchRouter);
 
 app.use(notFoundHandler);
 app.use(errorHandler);
@@ -46,6 +48,7 @@ app.use(errorHandler);
 app.listen(config.port, () => {
   // eslint-disable-next-line no-console
   console.log(
-    `[cyberhack-api] listening on port ${config.port} — mode: ${config.useMockAI ? 'MOCK AI' : 'LIVE AI (groq)'}`,
+    `[cyberhack-api] listening on port ${config.port} — AI: ${config.useMockAI ? 'MOCK' : 'LIVE (groq)'}, ` +
+      `search: ${config.useMockSearch ? 'MOCK' : 'LIVE (tavily)'}`,
   );
 });
