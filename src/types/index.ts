@@ -43,6 +43,8 @@ export interface Message {
   isStreaming?: boolean;
   /** Set when the assistant reply failed. UI renders ErrorState instead of content. */
   error?: boolean;
+  /** True if a real web search was performed for this reply (vs. answered from the model's own knowledge). */
+  searched?: boolean;
 }
 
 export interface Conversation {
