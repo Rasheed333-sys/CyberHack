@@ -1,24 +1,31 @@
 import { useEffect, useRef, useState } from 'react';
-import { ArrowUp, Paperclip, Mic, Globe, ShieldCheck, Compass, Loader2 } from 'lucide-react';
+import { ArrowUp, Paperclip, Mic, Globe, MessageSquare, Sparkles, ShieldCheck, Loader2 } from 'lucide-react';
 import { searchService } from '@/services/search';
 import SearchSuggestions from '@/components/search/SearchSuggestions';
 import type { SearchSuggestion } from '@/types';
+import type { SearchMode } from '@/services/ai';
 import { cn } from '@/utils/cn';
 import IconButton from '@/components/ui/IconButton';
 
 interface ChatInputProps {
-  onSubmit: (text: string) => void;
+  onSubmit: (text: string, mode: SearchMode) => void;
   loading?: boolean;
   disabled?: boolean;
   autoFocus?: boolean;
 }
 
+const MODE_CYCLE: SearchMode[] = ['auto', 'web', 'chat'];
+const MODE_META: Record<SearchMode, { label: string; icon: typeof Sparkles; title: string }> = {
+  auto: { label: 'Auto', icon: Sparkles, title: 'Auto — CyberHack decides whether to search the web' },
+  web: { label: 'Web Search', icon: Globe, title: 'Web Search — always search before answering' },
+  chat: { label: 'Chat Only', icon: MessageSquare, title: 'Chat Only — never search, answer from the model alone' },
+};
+
 export default function ChatInput({ onSubmit, loading, disabled, autoFocus }: ChatInputProps) {
   const [value, setValue] = useState('');
   const [suggestions, setSuggestions] = useState<SearchSuggestion[]>([]);
   const [showSuggestions, setShowSuggestions] = useState(false);
-  const [webSearchOn, setWebSearchOn] = useState(true);
-  const [deepResearchOn, setDeepResearchOn] = useState(false);
+  const [searchMode, setSearchMode] = useState<SearchMode>('auto');
   const [privacyModeOn, setPrivacyModeOn] = useState(true);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const wrapperRef = useRef<HTMLDivElement>(null);
@@ -55,7 +62,7 @@ export default function ChatInput({ onSubmit, loading, disabled, autoFocus }: Ch
   const handleSubmit = () => {
     const text = value.trim();
     if (!text || disabled || loading) return;
-    onSubmit(text);
+    onSubmit(text, searchMode);
     setValue('');
     setShowSuggestions(false);
   };
@@ -106,27 +113,20 @@ export default function ChatInput({ onSubmit, loading, disabled, autoFocus }: Ch
             <div className="w-px h-4 bg-line mx-1 hidden sm:block" />
             <button
               type="button"
-              onClick={() => setWebSearchOn((v) => !v)}
-              title="Toggle web search"
+              onClick={() => setSearchMode((m) => MODE_CYCLE[(MODE_CYCLE.indexOf(m) + 1) % MODE_CYCLE.length])}
+              title={MODE_META[searchMode].title}
               className={cn(
                 'h-7 flex items-center gap-1.5 px-2 rounded-sm text-[11px] font-mono uppercase tracking-wide transition-colors',
-                webSearchOn ? 'text-cyan bg-cyan/10 border border-cyan/30' : 'text-white/35 border border-transparent hover:text-white/60',
+                searchMode === 'chat'
+                  ? 'text-white/35 border border-transparent hover:text-white/60'
+                  : 'text-cyan bg-cyan/10 border border-cyan/30',
               )}
             >
-              <Globe size={12} />
-              <span className="hidden sm:inline">Search Web</span>
-            </button>
-            <button
-              type="button"
-              onClick={() => setDeepResearchOn((v) => !v)}
-              title="Toggle deep research mode"
-              className={cn(
-                'h-7 flex items-center gap-1.5 px-2 rounded-sm text-[11px] font-mono uppercase tracking-wide transition-colors',
-                deepResearchOn ? 'text-cyan bg-cyan/10 border border-cyan/30' : 'text-white/35 border border-transparent hover:text-white/60',
-              )}
-            >
-              <Compass size={12} />
-              <span className="hidden sm:inline">Deep Research</span>
+              {(() => {
+                const Icon = MODE_META[searchMode].icon;
+                return <Icon size={12} />;
+              })()}
+              <span className="hidden sm:inline">{MODE_META[searchMode].label}</span>
             </button>
             <button
               type="button"
