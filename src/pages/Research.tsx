@@ -9,7 +9,7 @@ import ErrorState from '@/components/ui/ErrorState';
 import Panel from '@/components/ui/Panel';
 import { renderMarkdown } from '@/utils/markdown';
 import { aiService } from '@/services/ai';
-import type { Message, ResearchStep } from '@/types';
+import type { Message, ResearchStep, Source } from '@/types';
 
 export default function Research() {
   const [query, setQuery] = useState('');
@@ -28,10 +28,17 @@ export default function Research() {
     try {
       const result = await aiService.ask({
         prompt,
+        // Research is always a multi-source search, regardless of the
+        // AUTO/WEB/CHAT control shown in ChatInput — this page's whole
+        // purpose is searching, so it doesn't defer to that toggle.
+        mode: 'web',
         onStep: (step) => {
           const exists = steps.some((s) => s.id === step.id);
           steps = exists ? steps.map((s) => (s.id === step.id ? step : s)) : [...steps, step];
           setMessage((m) => (m ? { ...m, researchSteps: [...steps] } : m));
+        },
+        onSources: (sources: Source[]) => {
+          setMessage((m) => (m ? { ...m, sources } : m));
         },
       });
       setMessage({ ...result.message, id });
