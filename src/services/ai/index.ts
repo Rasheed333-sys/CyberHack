@@ -12,6 +12,8 @@
 import { USE_MOCK_AI, ENDPOINTS, mockDelay } from '@/lib/config';
 import type { Message, ResearchStep, Source, Role } from '@/types';
 
+export type SearchMode = 'auto' | 'web' | 'chat';
+
 export interface AskParams {
   prompt: string;
   conversationId?: string;
@@ -21,7 +23,14 @@ export interface AskParams {
    * omitting it just means the request has no prior context.
    */
   history?: { role: Role; content: string }[];
+  /**
+   * "auto" (default) lets the backend decide whether fresh web info is
+   * needed; "web" always searches; "chat" never does. Ignored by the mock
+   * implementation, which never performs a real search either way.
+   */
+  mode?: SearchMode;
   onStep?: (step: ResearchStep) => void;
+  onSources?: (sources: Source[]) => void;
   onToken?: (partial: string) => void;
 }
 
@@ -108,6 +117,7 @@ async function realAsk(params: AskParams): Promise<AskResult> {
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
       messages: [...(params.history ?? []), { role: 'user', content: params.prompt }],
+      mode: params.mode ?? 'auto',
     }),
   });
 
@@ -126,6 +136,9 @@ async function realAsk(params: AskParams): Promise<AskResult> {
   const decoder = new TextDecoder();
   let buffer = '';
   let fullText = '';
+  let finalSteps: ResearchStep[] = [];
+  let finalSources: Source[] | undefined;
+  let searched = false;
 
   while (true) {
     const { done, value } = await reader.read();
@@ -140,7 +153,14 @@ async function realAsk(params: AskParams): Promise<AskResult> {
       if (!line.startsWith('data:')) continue;
       const payload = line.slice(5).trim();
 
-      let json: { token?: string; done?: boolean; error?: { code: string; message: string } };
+      let json: {
+        token?: string;
+        step?: ResearchStep;
+        sources?: Source[];
+        done?: boolean;
+        searched?: boolean;
+        error?: { code: string; message: string };
+      };
       try {
         json = JSON.parse(payload);
       } catch {
@@ -148,9 +168,23 @@ async function realAsk(params: AskParams): Promise<AskResult> {
       }
 
       if (json.error) throw new Error(json.error.message);
+
+      if (json.step) {
+        const step = json.step;
+        const exists = finalSteps.some((s) => s.id === step.id);
+        finalSteps = exists ? finalSteps.map((s) => (s.id === step.id ? step : s)) : [...finalSteps, step];
+        params.onStep?.(step);
+      }
+      if (json.sources) {
+        finalSources = json.sources;
+        params.onSources?.(json.sources);
+      }
       if (json.token) {
         fullText += json.token;
         params.onToken?.(json.token);
+      }
+      if (json.done) {
+        searched = json.searched ?? false;
       }
     }
   }
@@ -161,6 +195,9 @@ async function realAsk(params: AskParams): Promise<AskResult> {
       role: 'assistant',
       content: fullText,
       createdAt: new Date().toISOString(),
+      researchSteps: finalSteps.length > 0 ? finalSteps : undefined,
+      sources: finalSources,
+      searched,
     },
   };
 }
