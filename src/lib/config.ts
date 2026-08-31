@@ -12,6 +12,11 @@ export const USE_MOCK_SERVICES =
 // without needing search/privacy/security backends to exist yet.
 export const USE_MOCK_AI = (import.meta.env.VITE_USE_MOCK_AI ?? 'true') !== 'false';
 
+// Web search (the Search page's searchService.search — not the chat AI's
+// own built-in search, which is entirely server-side) is switched the
+// same way, independently from USE_MOCK_SERVICES.
+export const USE_MOCK_SEARCH = (import.meta.env.VITE_USE_MOCK_SEARCH ?? 'true') !== 'false';
+
 export const ENDPOINTS = {
   ai: import.meta.env.VITE_AI_GATEWAY_URL ?? '',
   search: import.meta.env.VITE_SEARCH_API_URL ?? '',
