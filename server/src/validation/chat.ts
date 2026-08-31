@@ -6,14 +6,21 @@ export interface ValidationError {
   message: string;
 }
 
-export type ValidationResult = { messages: ChatMessage[] } | { error: ValidationError };
+export type SearchMode = 'auto' | 'web' | 'chat';
+
+export type ValidationResult = { messages: ChatMessage[]; mode: SearchMode } | { error: ValidationError };
 
 export function validateChatBody(body: unknown): ValidationResult {
   if (!body || typeof body !== 'object') {
     return { error: { code: 'INVALID_BODY', message: 'Request body must be a JSON object.' } };
   }
 
-  const { messages } = body as { messages?: unknown };
+  const { messages, mode } = body as { messages?: unknown; mode?: unknown };
+
+  if (mode !== undefined && mode !== 'auto' && mode !== 'web' && mode !== 'chat') {
+    return { error: { code: 'INVALID_MODE', message: '"mode" must be one of "auto", "web", or "chat".' } };
+  }
+  const resolvedMode: SearchMode = (mode as SearchMode | undefined) ?? 'auto';
 
   if (!Array.isArray(messages) || messages.length === 0) {
     return { error: { code: 'INVALID_MESSAGES', message: '"messages" must be a non-empty array.' } };
@@ -57,5 +64,5 @@ export function validateChatBody(body: unknown): ValidationResult {
     return { error: { code: 'INVALID_LAST_MESSAGE', message: 'The last message must be from the user.' } };
   }
 
-  return { messages: cleaned };
+  return { messages: cleaned, mode: resolvedMode };
 }
