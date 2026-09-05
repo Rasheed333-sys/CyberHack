@@ -7,6 +7,7 @@ import { errorHandler, notFoundHandler } from './middleware/errorHandler';
 import { healthRouter } from './routes/health';
 import { chatRouter } from './routes/chat';
 import { searchRouter } from './routes/search';
+import { debugRouter } from './routes/debug';
 
 const app = express();
 
@@ -25,12 +26,17 @@ app.use(
         callback(null, true);
         return;
       }
+
       const allowed =
-        config.nodeEnv === 'production' ? config.allowedOrigins : [...config.allowedOrigins, ...DEV_ORIGINS];
+        config.nodeEnv === 'production'
+          ? config.allowedOrigins
+          : [...config.allowedOrigins, ...DEV_ORIGINS];
+
       if (allowed.includes(origin)) {
         callback(null, true);
         return;
       }
+
       callback(new Error('Not allowed by CORS'));
     },
   }),
@@ -42,13 +48,19 @@ app.use('/api', healthRouter);
 app.use('/api', chatRateLimiter, chatRouter);
 app.use('/api', searchRateLimiter, searchRouter);
 
+// Temporary Groq diagnostic endpoint.
+// Remove this after we finish debugging Groq.
+app.use('/api/debug', debugRouter);
+
 app.use(notFoundHandler);
 app.use(errorHandler);
 
 app.listen(config.port, () => {
   // eslint-disable-next-line no-console
   console.log(
-    `[cyberhack-api] listening on port ${config.port} — AI: ${config.useMockAI ? 'MOCK' : 'LIVE (groq)'}, ` +
+    `[cyberhack-api] listening on port ${config.port} — AI: ${
+      config.useMockAI ? 'MOCK' : 'LIVE (groq)'
+    }, ` +
       `search: ${config.useMockSearch ? 'MOCK' : 'LIVE (tavily)'}`,
   );
 });
