@@ -7,7 +7,7 @@ import { errorHandler, notFoundHandler } from './middleware/errorHandler';
 import { healthRouter } from './routes/health';
 import { chatRouter } from './routes/chat';
 import { searchRouter } from './routes/search';
-import { debugRouter } from './routes/debug';
+import debugRouter from './routes/debug';
 
 const app = express();
 
