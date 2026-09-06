@@ -7,7 +7,6 @@ import { errorHandler, notFoundHandler } from './middleware/errorHandler';
 import { healthRouter } from './routes/health';
 import { chatRouter } from './routes/chat';
 import { searchRouter } from './routes/search';
-import debugRouter from './routes/debug';
 
 const app = express();
 
@@ -50,7 +49,7 @@ app.use('/api', searchRateLimiter, searchRouter);
 
 // Temporary Groq diagnostic endpoint.
 // Remove this after we finish debugging Groq.
-app.use('/api/debug', debugRouter);
+
 
 app.use(notFoundHandler);
 app.use(errorHandler);
