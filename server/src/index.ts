@@ -49,8 +49,7 @@ app.use('/api', healthRouter);
 app.use('/api', chatRateLimiter, chatRouter);
 app.use('/api', searchRateLimiter, searchRouter);
 
-// Temporary Groq diagnostic endpoint.
-// Remove this after we finish debugging Groq.
+
 
 
 app.use(notFoundHandler);
