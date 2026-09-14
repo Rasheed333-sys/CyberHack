@@ -1,6 +1,7 @@
 import { config } from '../../config';
 import { createTavilyProvider } from './providers/tavilyProvider';
 import { createMockSearchProvider } from './providers/mockProvider';
+import { rankSearchResults } from './sourceRanker';
 import type { SearchProvider, NormalizedSearchResult } from './types';
 
 let cachedProvider: SearchProvider | null = null;
@@ -35,7 +36,7 @@ function dedupe(results: NormalizedSearchResult[]): NormalizedSearchResult[] {
 
 export async function search(query: string, maxResults: number): Promise<NormalizedSearchResult[]> {
   const raw = await getProvider().search(query, maxResults);
-  return dedupe(raw);
+  return rankSearchResults(dedupe(raw));
 }
 
 export function currentSearchProviderName(): string {
