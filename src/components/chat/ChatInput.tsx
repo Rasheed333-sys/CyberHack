@@ -1,5 +1,15 @@
 import { useEffect, useRef, useState } from 'react';
-import { ArrowUp, Paperclip, Mic, Globe, MessageSquare, Sparkles, ShieldCheck, Loader2 } from 'lucide-react';
+import {
+  ArrowUp,
+  Paperclip,
+  Mic,
+  Globe,
+  MessageSquare,
+  Sparkles,
+  ShieldCheck,
+  Loader2,
+  Compass,
+} from 'lucide-react';
 import { searchService } from '@/services/search';
 import SearchSuggestions from '@/components/search/SearchSuggestions';
 import type { SearchSuggestion } from '@/types';
@@ -14,11 +24,29 @@ interface ChatInputProps {
   autoFocus?: boolean;
 }
 
-const MODE_CYCLE: SearchMode[] = ['auto', 'web', 'chat'];
+const MODE_CYCLE: SearchMode[] = ['auto', 'web', 'chat', 'research'];
+
 const MODE_META: Record<SearchMode, { label: string; icon: typeof Sparkles; title: string }> = {
-  auto: { label: 'Auto', icon: Sparkles, title: 'Auto — CyberHack decides whether to search the web' },
-  web: { label: 'Web Search', icon: Globe, title: 'Web Search — always search before answering' },
-  chat: { label: 'Chat Only', icon: MessageSquare, title: 'Chat Only — never search, answer from the model alone' },
+  auto: {
+    label: 'Auto',
+    icon: Sparkles,
+    title: 'Auto — CyberHack decides whether to search the web',
+  },
+  web: {
+    label: 'Web Search',
+    icon: Globe,
+    title: 'Web Search — always search before answering',
+  },
+  chat: {
+    label: 'Chat Only',
+    icon: MessageSquare,
+    title: 'Chat Only — never search, answer from the model alone',
+  },
+  research: {
+    label: 'Research',
+    icon: Compass,
+    title: 'Research — search multiple sources and synthesize a cited answer',
+  },
 };
 
 export default function ChatInput({ onSubmit, loading, disabled, autoFocus }: ChatInputProps) {
@@ -43,17 +71,22 @@ export default function ChatInput({ onSubmit, loading, disabled, autoFocus }: Ch
 
   useEffect(() => {
     function onClickOutside(e: MouseEvent) {
-      if (wrapperRef.current && !wrapperRef.current.contains(e.target as Node)) setShowSuggestions(false);
+      if (wrapperRef.current && !wrapperRef.current.contains(e.target as Node)) {
+        setShowSuggestions(false);
+      }
     }
+
     document.addEventListener('mousedown', onClickOutside);
     return () => document.removeEventListener('mousedown', onClickOutside);
   }, []);
 
   useEffect(() => {
     let active = true;
+
     searchService.suggest(value).then((res) => {
       if (active) setSuggestions(res);
     });
+
     return () => {
       active = false;
     };
@@ -62,6 +95,7 @@ export default function ChatInput({ onSubmit, loading, disabled, autoFocus }: Ch
   const handleSubmit = () => {
     const text = value.trim();
     if (!text || disabled || loading) return;
+
     onSubmit(text, searchMode);
     setValue('');
     setShowSuggestions(false);
@@ -72,6 +106,7 @@ export default function ChatInput({ onSubmit, loading, disabled, autoFocus }: Ch
       e.preventDefault();
       handleSubmit();
     }
+
     if (e.key === 'Escape') setShowSuggestions(false);
   };
 
@@ -91,7 +126,9 @@ export default function ChatInput({ onSubmit, loading, disabled, autoFocus }: Ch
       <div
         className={cn(
           'relative rounded-sm border bg-void-900 transition-colors',
-          disabled ? 'border-line opacity-60' : 'border-line focus-within:border-neon/50 focus-within:shadow-neon',
+          disabled
+            ? 'border-line opacity-60'
+            : 'border-line focus-within:border-neon/50 focus-within:shadow-neon',
         )}
       >
         <textarea
@@ -108,12 +145,29 @@ export default function ChatInput({ onSubmit, loading, disabled, autoFocus }: Ch
 
         <div className="flex items-center justify-between px-2.5 pb-2.5 pt-1.5 flex-wrap gap-y-2">
           <div className="flex items-center gap-1 flex-wrap">
-            <IconButton icon={<Paperclip size={14} />} label="Attach a file (coming soon)" disabled size="sm" />
-            <IconButton icon={<Mic size={14} />} label="Voice input (coming soon)" disabled size="sm" />
+            <IconButton
+              icon={<Paperclip size={14} />}
+              label="Attach a file (coming soon)"
+              disabled
+              size="sm"
+            />
+
+            <IconButton
+              icon={<Mic size={14} />}
+              label="Voice input (coming soon)"
+              disabled
+              size="sm"
+            />
+
             <div className="w-px h-4 bg-line mx-1 hidden sm:block" />
+
             <button
               type="button"
-              onClick={() => setSearchMode((m) => MODE_CYCLE[(MODE_CYCLE.indexOf(m) + 1) % MODE_CYCLE.length])}
+              onClick={() =>
+                setSearchMode(
+                  (m) => MODE_CYCLE[(MODE_CYCLE.indexOf(m) + 1) % MODE_CYCLE.length],
+                )
+              }
               title={MODE_META[searchMode].title}
               className={cn(
                 'h-7 flex items-center gap-1.5 px-2 rounded-sm text-[11px] font-mono uppercase tracking-wide transition-colors',
@@ -126,15 +180,21 @@ export default function ChatInput({ onSubmit, loading, disabled, autoFocus }: Ch
                 const Icon = MODE_META[searchMode].icon;
                 return <Icon size={12} />;
               })()}
-              <span className="hidden sm:inline">{MODE_META[searchMode].label}</span>
+
+              <span className="hidden sm:inline">
+                {MODE_META[searchMode].label}
+              </span>
             </button>
+
             <button
               type="button"
               onClick={() => setPrivacyModeOn((v) => !v)}
               title="Toggle privacy-routed browsing"
               className={cn(
-                'h-7 flex items-center gap-1.5 px-2 rounded-sm text-[11px] font-mono uppercase tracking-wide transition-colors',
-                privacyModeOn ? 'text-neon bg-neon/10 border border-neon/30' : 'text-white/35 border border-transparent hover:text-white/60',
+                'h-7 flex items-center gap-1.5 px-2 rounded-sm text-[11px] font-mono uppercase tracking-wide',
+                privacyModeOn
+                  ? 'text-neon bg-neon/10 border border-neon/30'
+                  : 'text-white/35 border border-transparent hover:text-white/60',
               )}
             >
               <ShieldCheck size={12} />
@@ -143,7 +203,10 @@ export default function ChatInput({ onSubmit, loading, disabled, autoFocus }: Ch
           </div>
 
           <div className="flex items-center gap-2">
-            <span className="hidden md:inline mono-label !text-white/25">⏎ send · ⇧⏎ newline</span>
+            <span className="hidden md:inline mono-label !text-white/25">
+              ⏎ send · ⇧⏎ newline
+            </span>
+
             <button
               type="button"
               onClick={handleSubmit}
@@ -156,7 +219,11 @@ export default function ChatInput({ onSubmit, loading, disabled, autoFocus }: Ch
               )}
               aria-label="Send"
             >
-              {loading ? <Loader2 size={15} className="animate-spin" /> : <ArrowUp size={15} />}
+              {loading ? (
+                <Loader2 size={15} className="animate-spin" />
+              ) : (
+                <ArrowUp size={15} />
+              )}
             </button>
           </div>
         </div>
