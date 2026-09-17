@@ -23,8 +23,7 @@ const MAX_RESEARCH_SOURCES = Math.min(
 );
 
 /**
- * Research intentionally uses fewer search variations than the planner's
- * absolute maximum when the configured source-fetch budget is small.
+ * Keep the number of independent searches controlled.
  *
  * With the current defaults:
  *   sourcesToFetch = 4
@@ -59,7 +58,7 @@ export async function gatherResearchSources(query: string): Promise<ResearchGath
   }
 
   /**
-   * Run the independent research searches in parallel.
+   * Run independent research searches in parallel.
    * A failed query does not fail the entire research run.
    */
   const outcomes = await Promise.allSettled(
@@ -85,8 +84,7 @@ export async function gatherResearchSources(query: string): Promise<ResearchGath
   /**
    * Deduplicate URLs across all research queries.
    *
-   * This is important because the same authoritative source can appear
-   * for several different query variations.
+   * The same authoritative source can appear for several query variations.
    */
   const seen = new Set<string>();
   const deduped: NormalizedSource[] = [];
@@ -101,15 +99,16 @@ export async function gatherResearchSources(query: string): Promise<ResearchGath
   }
 
   /**
-   * Re-rank the combined pool after deduplication so high-quality sources
-   * from later research queries can still rise above weaker results.
+   * Source ranking only changes the order of results, so preserve the
+   * complete NormalizedSource objects, including their extracted content.
    */
-  const ranked = rankSearchResults(deduped);
+  const ranked: NormalizedSource[] = rankSearchResults(deduped).map(
+    (result) => deduped.find((source) => source.url === result.url) ?? result as NormalizedSource,
+  );
 
   /**
-   * Reassign source IDs after the final ranking/truncation so the IDs
-   * correspond exactly to the [1], [2], [3]... citation numbers used by
-   * the research system prompt.
+   * Reassign source IDs after final ranking/truncation so IDs correspond
+   * exactly to the [1], [2], [3]... citation numbers used by the AI.
    */
   const finalSources: NormalizedSource[] = ranked
     .slice(0, MAX_RESEARCH_SOURCES)
