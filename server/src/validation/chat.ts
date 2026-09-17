@@ -6,7 +6,7 @@ export interface ValidationError {
   message: string;
 }
 
-export type SearchMode = 'auto' | 'web' | 'chat';
+export type SearchMode = 'auto' | 'web' | 'chat' | 'research';
 
 export type ValidationResult = { messages: ChatMessage[]; mode: SearchMode } | { error: ValidationError };
 
@@ -17,8 +17,8 @@ export function validateChatBody(body: unknown): ValidationResult {
 
   const { messages, mode } = body as { messages?: unknown; mode?: unknown };
 
-  if (mode !== undefined && mode !== 'auto' && mode !== 'web' && mode !== 'chat') {
-    return { error: { code: 'INVALID_MODE', message: '"mode" must be one of "auto", "web", or "chat".' } };
+  if (mode !== undefined && mode !== 'auto' && mode !== 'web' && mode !== 'chat' && mode !== 'research') {
+    return { error: { code: 'INVALID_MODE', message: '"mode" must be one of "auto", "web", "chat", or "research".' } };
   }
   const resolvedMode: SearchMode = (mode as SearchMode | undefined) ?? 'auto';
 
