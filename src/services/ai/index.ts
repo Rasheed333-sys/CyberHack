@@ -12,7 +12,7 @@
 import { USE_MOCK_AI, ENDPOINTS, mockDelay } from '@/lib/config';
 import type { Message, ResearchStep, Source, Role } from '@/types';
 
-export type SearchMode = 'auto' | 'web' | 'chat';
+export type SearchMode = 'auto' | 'web' | 'chat' | 'research';
 
 export interface AskParams {
   prompt: string;
@@ -25,8 +25,9 @@ export interface AskParams {
   history?: { role: Role; content: string }[];
   /**
    * "auto" (default) lets the backend decide whether fresh web info is
-   * needed; "web" always searches; "chat" never does. Ignored by the mock
-   * implementation, which never performs a real search either way.
+   * needed; "web" always searches; "chat" never does; "research" runs the
+   * multi-source research pipeline. Ignored by the mock implementation,
+   * which never performs a real search either way.
    */
   mode?: SearchMode;
   onStep?: (step: ResearchStep) => void;
