@@ -28,10 +28,11 @@ export default function Research() {
     try {
       const result = await aiService.ask({
         prompt,
-        // Research is always a multi-source search, regardless of the
-        // AUTO/WEB/CHAT control shown in ChatInput — this page's whole
-        // purpose is searching, so it doesn't defer to that toggle.
-        mode: 'web',
+        // Research now has its own backend pipeline (multi-query planning
+        // + cross-source synthesis) — 'web' would only run one normal
+        // search. This is a dedicated mode, not the AUTO/WEB/CHAT control
+        // shown in ChatInput on other pages; Research always uses it.
+        mode: 'research',
         onStep: (step) => {
           const exists = steps.some((s) => s.id === step.id);
           steps = exists ? steps.map((s) => (s.id === step.id ? step : s)) : [...steps, step];
