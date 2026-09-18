@@ -55,6 +55,13 @@ const LOW_PRIORITY_DOMAINS = new Set([
   'twitter.com',
   'reddit.com',
   'quora.com',
+  // Video/short-form platforms: same "user-generated/aggregator, not a
+  // primary source" category as the rest of this set. Added after
+  // observing keynote/event videos (e.g. a conference livestream) ranking
+  // ahead of genuinely on-topic sources in Research mode.
+  'youtube.com',
+  'tiktok.com',
+  'pinterest.com',
 ]);
 
 // Path fragments that indicate official documentation/reference material,
