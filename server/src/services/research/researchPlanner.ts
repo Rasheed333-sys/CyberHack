@@ -43,7 +43,7 @@ const COMPARISON_PATTERNS = [
 // verbatim as the first query) is never truncated.
 const MAX_TOPIC_CHARS_FOR_VARIANTS = 200;
 
-function stripTrailingPunctuation(text: string): string {
+export function stripTrailingPunctuation(text: string): string {
   return text.replace(/[?.!]+$/, '').trim();
 }
 
@@ -66,8 +66,12 @@ function isNarrowFactual(query: string): boolean {
   return wordCount <= NARROW_FACTUAL_MAX_WORDS && NARROW_FACTUAL_PATTERNS.some((p) => p.test(query));
 }
 
-/** Tries to split a comparison question into its two subjects. Returns null if no pattern matches cleanly. */
-function tryComparisonSplit(topic: string): [string, string] | null {
+/**
+ * Tries to split a comparison question into its two subjects. Returns null
+ * if no pattern matches cleanly. Exported so researchIntent.ts can reuse
+ * the exact same comparison detection rather than duplicating it.
+ */
+export function tryComparisonSplit(topic: string): [string, string] | null {
   for (const pattern of COMPARISON_PATTERNS) {
     const match = topic.match(pattern);
     const a = match?.[1]?.trim();
