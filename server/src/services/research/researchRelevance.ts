@@ -1,4 +1,5 @@
 import type { NormalizedSearchResult } from '../search/types';
+import { analyzeResearchIntent, scoreIntentEvidence } from './researchIntent';
 
 /**
  * Deterministic research relevance filter.
@@ -191,11 +192,16 @@ export function scoreResearchRelevance(vocabulary: Vocabulary, result: Normalize
 }
 
 /**
- * Filters a candidate pool down to results relevant to the research topic.
- * Scores everything, keeps what clears RELEVANCE_THRESHOLD, and — only if
- * absolutely nothing clears it — falls back to the top MIN_RETAINED_FALLBACK
- * candidates so a research run never dead-ends into zero evidence just
- * because every candidate was a mediocre partial match.
+ * Filters a candidate pool down to results relevant to the research topic
+ * AND to what the question is actually asking (Stage 2D). Combines two
+ * independent, additive scores: topic-term overlap (scoreResearchRelevance,
+ * unchanged from Stage 2C) and intent/evidence fit (scoreIntentEvidence,
+ * new) — a source can be on-topic but poor evidence, or vice versa, and
+ * this treats both as separate signals rather than conflating them.
+ * Keeps what clears the (still topic-term-count-scaled) threshold, and —
+ * only if absolutely nothing clears it — falls back to the top
+ * MIN_RETAINED_FALLBACK candidates so a research run never dead-ends into
+ * zero evidence just because every candidate was a mediocre partial match.
  */
 export function filterResearchResults<T extends NormalizedSearchResult>(
   originalQuery: string,
@@ -205,8 +211,13 @@ export function filterResearchResults<T extends NormalizedSearchResult>(
   if (results.length === 0) return results;
 
   const vocabulary = buildVocabulary(originalQuery, allPlannedQueries);
+  const intent = analyzeResearchIntent(originalQuery);
+
   const scored = results
-    .map((result) => ({ result, score: scoreResearchRelevance(vocabulary, result) }))
+    .map((result) => ({
+      result,
+      score: scoreResearchRelevance(vocabulary, result) + scoreIntentEvidence(intent, result),
+    }))
     .sort((a, b) => b.score - a.score);
 
   const threshold = relevanceThreshold(vocabulary.primary.size);
