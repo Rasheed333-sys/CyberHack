@@ -23,6 +23,45 @@ export interface ResearchGatherResult {
  */
 const MAX_RESEARCH_SOURCES = Math.min(config.search.sourcesToFetch * 2, config.searchRequest.maxResultsCeiling);
 
+// Light diversity preference: avoid the final set being dominated by many
+// pages from one domain. Not a hard one-per-domain rule (some domains
+// legitimately deserve two entries), and never enforced so strictly that
+// it shrinks the result set below what's actually available — see
+// selectDiverseTopSources below.
+const MAX_SOURCES_PER_DOMAIN = 2;
+
+/**
+ * Selects up to `limit` sources from an already quality-ranked list,
+ * preferring not to take more than MAX_SOURCES_PER_DOMAIN from the same
+ * domain. If the domain cap would leave the result set short (e.g. almost
+ * everything came from one or two domains), backfills from the
+ * lower-ranked remainder in rank order rather than under-filling the
+ * research budget just to enforce diversity strictly.
+ */
+function selectDiverseTopSources(ranked: NormalizedSource[], limit: number): NormalizedSource[] {
+  const perDomainCount = new Map<string, number>();
+  const selected: NormalizedSource[] = [];
+  const deferred: NormalizedSource[] = [];
+
+  for (const source of ranked) {
+    if (selected.length >= limit) break;
+    const count = perDomainCount.get(source.domain) ?? 0;
+    if (count < MAX_SOURCES_PER_DOMAIN) {
+      selected.push(source);
+      perDomainCount.set(source.domain, count + 1);
+    } else {
+      deferred.push(source);
+    }
+  }
+
+  for (const source of deferred) {
+    if (selected.length >= limit) break;
+    selected.push(source);
+  }
+
+  return selected;
+}
+
 /**
  * Same URL-normalization concept as searchService.ts's private dedupe
  * (ignore protocol/www/trailing slash/query/fragment) — duplicated here
@@ -95,7 +134,7 @@ export async function gatherResearchSources(query: string): Promise<ResearchGath
   const relevant = filterResearchResults(query, queries, deduped);
 
   // eslint-disable-next-line no-console
-  console.log(`[research] deduped=${deduped.length} relevant=${relevant.length}`);
+  console.log(`[research] deduped=${deduped.length} relevant=${relevant.length} rejected=${deduped.length - relevant.length}`);
 
   // Reuse the existing ranker as-is, on the relevance survivors only.
   // rankSearchResults only reads url and reorders — it never mutates
@@ -105,7 +144,7 @@ export async function gatherResearchSources(query: string): Promise<ResearchGath
   // signature erased.
   const ranked = rankSearchResults(relevant) as NormalizedSource[];
 
-  const finalSources: NormalizedSource[] = ranked.slice(0, MAX_RESEARCH_SOURCES).map((source, index) => ({
+  const finalSources: NormalizedSource[] = selectDiverseTopSources(ranked, MAX_RESEARCH_SOURCES).map((source, index) => ({
     ...source,
     id: `source_${index + 1}`,
   }));
